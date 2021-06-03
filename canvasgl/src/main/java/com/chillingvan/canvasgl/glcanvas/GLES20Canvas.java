@@ -22,6 +22,8 @@ package com.chillingvan.canvasgl.glcanvas;
 import android.graphics.Bitmap;
 import android.graphics.Rect;
 import android.graphics.RectF;
+import android.opengl.ETC1;
+import android.opengl.ETC1Util;
 import android.opengl.GLES11Ext;
 import android.opengl.GLES20;
 import android.opengl.GLUtils;
@@ -82,6 +84,9 @@ public class GLES20Canvas implements GLCanvas {
             1, 1, 0, 1,
     };
 
+    private float[] uvCoor = new float[]{0, 1, 1, 1, 1, 0, 0, 0};
+    private FloatBuffer uvCoorbuffer;
+
     public static final String POSITION_ATTRIBUTE = "aPosition";
     public static final String COLOR_UNIFORM = "uColor";
     public static final String MATRIX_UNIFORM = "uMatrix";
@@ -135,6 +140,7 @@ public class GLES20Canvas implements GLCanvas {
 
     // GL buffer containing BOX_COORDINATES
     private int mBoxCoordinates;
+    private int mVCoorindates;
 
     // Handle indices -- common
     private static final int INDEX_POSITION = 0;
@@ -147,6 +153,7 @@ public class GLES20Canvas implements GLCanvas {
     private static final int INDEX_TEXTURE_MATRIX = 2;
     private static final int INDEX_TEXTURE_SAMPLER = 3;
     private static final int INDEX_ALPHA = 4;
+    private static final int INDEX_COOR = 5;
 
     // Handle indices -- mesh
     private static final int INDEX_TEXTURE_COORD = 2;
@@ -204,6 +211,7 @@ public class GLES20Canvas implements GLCanvas {
             new UniformShaderParameter(TEXTURE_MATRIX_UNIFORM), // INDEX_TEXTURE_MATRIX
             new UniformShaderParameter(TEXTURE_SAMPLER_UNIFORM), // INDEX_TEXTURE_SAMPLER
             new UniformShaderParameter(ALPHA_UNIFORM), // INDEX_ALPHA
+            new AttributeShaderParameter(TEXTURE_COORD_ATTRIBUTE)
     };
     ShaderParameter[] mOesTextureParameters = {
             new AttributeShaderParameter(POSITION_ATTRIBUTE), // INDEX_POSITION
@@ -211,6 +219,7 @@ public class GLES20Canvas implements GLCanvas {
             new UniformShaderParameter(TEXTURE_MATRIX_UNIFORM), // INDEX_TEXTURE_MATRIX
             new UniformShaderParameter(TEXTURE_SAMPLER_UNIFORM), // INDEX_TEXTURE_SAMPLER
             new UniformShaderParameter(ALPHA_UNIFORM), // INDEX_ALPHA
+            new AttributeShaderParameter(TEXTURE_COORD_ATTRIBUTE)
     };
     ShaderParameter[] mMeshParameters = {
             new AttributeShaderParameter(POSITION_ATTRIBUTE), // INDEX_POSITION
@@ -254,6 +263,9 @@ public class GLES20Canvas implements GLCanvas {
 
         FloatBuffer boxBuffer = createBuffer(BOX_COORDINATES);
         mBoxCoordinates = uploadBuffer(boxBuffer);
+//        FloatBuffer coorBuffer = createBuffer(uvCoor);
+//        mVCoorindates = uploadBuffer(coorBuffer);
+
 
 
         mDrawProgram = assembleProgram(loadShader(GLES20.GL_VERTEX_SHADER, BasicDrawShapeFilter.DRAW_VERTEX_SHADER), loadShader(GLES20.GL_FRAGMENT_SHADER, BasicDrawShapeFilter.DRAW_FRAGMENT_SHADER), mDrawParameters, mTempIntArray);
@@ -460,7 +472,7 @@ public class GLES20Canvas implements GLCanvas {
     @Override
     public void drawCircle(float x, float y, float radius, GLPaint paint, DrawShapeFilter drawShapeFilter) {
         setupDrawShapeFilter(drawShapeFilter);
-        draw(GLES20.GL_TRIANGLE_STRIP, OFFSET_FILL_RECT, COUNT_FILL_VERTEX, x, y, 2*radius, 2*radius, paint.getColor(), 0f);
+        draw(GLES20.GL_TRIANGLE_STRIP, OFFSET_FILL_RECT, COUNT_FILL_VERTEX, x, y, 2 * radius, 2 * radius, paint.getColor(), 0f);
     }
 
     @Override
@@ -545,11 +557,13 @@ public class GLES20Canvas implements GLCanvas {
                       float height, ICustomMVPMatrix customMVPMatrix) {
         setMatrix(params, x, y, width, height, customMVPMatrix);
         int positionHandle = params[INDEX_POSITION].handle;
+
         GLES20.glEnableVertexAttribArray(positionHandle);
         checkError();
         GLES20.glDrawArrays(type, 0, count);
         checkError();
         GLES20.glDisableVertexAttribArray(positionHandle);
+
         checkError();
     }
 
@@ -559,7 +573,7 @@ public class GLES20Canvas implements GLCanvas {
             checkError();
             return;
         }
-        GLES20.glViewport(0, 0, mScreenWidth, mScreenHeight);
+        GLES20.glViewport(0, 0, (int)width, (int)height);
         Matrix.translateM(mTempMatrix, 0, mMatrices, mCurrentMatrixIndex, x, y, 0f);
         Matrix.scaleM(mTempMatrix, 0, width, height, 1f);
         Matrix.multiplyMM(mTempMatrix, MATRIX_SIZE, mProjectionMatrix, 0, mTempMatrix, 0);
@@ -645,8 +659,25 @@ public class GLES20Canvas implements GLCanvas {
             scale(1, -1, 1);
             translate(0, -target.centerY());
         }
+//        int coorHandle = params[INDEX_COOR].handle;
+//        if(coorHandle>=0){
+//
+//            GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, mVCoorindates);
+//            checkError();
+//
+//            GLES20.glVertexAttribPointer(coorHandle, COORDS_PER_VERTEX, GLES20.GL_FLOAT,
+//                    false, VERTEX_STRIDE, 0);
+//            checkError();
+//            GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, 0);
+//            checkError();
+//
+//            GLES20.glEnableVertexAttribArray(coorHandle);
+//        }
         draw(params, GLES20.GL_TRIANGLE_STRIP, COUNT_FILL_VERTEX, target.left, target.top,
                 target.width(), target.height(), customMVPMatrix);
+        checkError();
+//        if(coorHandle>=0)
+//            GLES20.glDisableVertexAttribArray(coorHandle);
         if (texture.isFlippedVertically()) {
             restore();
         }
@@ -954,6 +985,15 @@ public class GLES20Canvas implements GLCanvas {
     }
 
     @Override
+    public void texETC1Texture(BasicTexture texture, int level, int border, int fallbackFormat, int fallbackType, ETC1Util.ETC1Texture etc1Texture) {
+        int target = texture.getTarget();
+        GLES20.glBindTexture(target, texture.getId());
+        checkError();
+        ETC1Util.loadTexture(target, level, border, fallbackFormat, fallbackType, etc1Texture);
+//        GLES20.glCompressedTexImage2D(GLES20.GL_TEXTURE_2D, 0, ETC1.ETC1_RGB8_OES, etc1Texture.getWidth(), etc1Texture.getHeight(), 0, etc1Texture.getData().capacity(), etc1Texture.getData());
+    }
+
+    @Override
     public int uploadBuffer(FloatBuffer buf) {
         return uploadBuffer(buf, FLOAT_SIZE);
     }
@@ -995,12 +1035,12 @@ public class GLES20Canvas implements GLCanvas {
             String format = "%.6f";
             b.append(String.format(format, m[offset + i]));
             b.append(", ");
-            b.append(String.format(format, m[offset + 4+i]));
+            b.append(String.format(format, m[offset + 4 + i]));
             b.append(", ");
-            b.append(String.format(format, m[offset + 8+i]));
+            b.append(String.format(format, m[offset + 8 + i]));
             b.append(", ");
-            b.append(String.format(format, m[offset + 12+i]));
-            if (i<size-1) {
+            b.append(String.format(format, m[offset + 12 + i]));
+            if (i < size - 1) {
                 b.append(", ");
             }
             b.append('\n');

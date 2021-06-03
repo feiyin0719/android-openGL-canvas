@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest package="com.chillingvan.canvasglsample"
-    xmlns:android="http://schemas.android.com/apk/res/android">
-
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.chillingvan.canvasglsample">
 
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.CAMERA" />
@@ -13,12 +12,18 @@
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
-        <activity android:name=".MainActivity">
+        <activity
+            android:name=".etctest.ETC1Activity"
+            android:label="@string/title_activity_e_t_c1"
+            android:theme="@style/AppTheme.NoActionBar">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+        </activity>
+        <activity android:name=".MainActivity">
+
         </activity>
         <activity
             android:name=".filter.FilterActivity"
@@ -158,17 +163,16 @@
         </activity>
         <activity
             android:name=".testcase.testMatrix.TestMatrixSurfaceActivity"
-            android:label="TestMatrixSurfaceActivity"
-            >
+            android:label="TestMatrixSurfaceActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="com.chillingvan.canvasglsample" />
             </intent-filter>
         </activity>
-        <activity android:name=".screenRecord.ScreenRecordActivity"
-            android:label="ScreenRecordActivity"
-            >
+        <activity
+            android:name=".screenRecord.ScreenRecordActivity"
+            android:label="ScreenRecordActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 

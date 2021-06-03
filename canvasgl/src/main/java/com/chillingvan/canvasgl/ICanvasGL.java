@@ -24,6 +24,7 @@ import android.graphics.Bitmap;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.SurfaceTexture;
+import android.opengl.ETC1Util;
 import android.opengl.GLES20;
 import android.opengl.Matrix;
 import android.support.annotation.IntRange;
@@ -83,6 +84,10 @@ public interface ICanvasGL {
     void drawBitmap(Bitmap bitmap, int left, int top, int width, int height);
 
     void drawBitmap(Bitmap bitmap, int left, int top, int width, int height, @NonNull TextureFilter textureFilter);
+
+    void drawETC1Texture(ETC1Util.ETC1Texture texture, Rect src, Rect dst,TextureFilter textureFilter);
+
+    void drawETC1Texture(ETC1Util.ETC1Texture texture, Rect src, Rect dst);
 
     void invalidateTextureContent(Bitmap bitmap);
 
@@ -164,6 +169,7 @@ public interface ICanvasGL {
 
         /**
          * Should not be larger than 2 * GLES20.GL_MAX_VIEWPORT_DIMS
+         *
          * @param sx
          * @param sy
          */
@@ -195,8 +201,8 @@ public interface ICanvasGL {
             // Move view port to make sure the picture in the center of the view port.
             final float absTransX = Math.abs(transform[TRANSLATE_X]); // Make sure viewportX + realViewportW includes viewportW
             final float absTransY = Math.abs(transform[TRANSLATE_Y]); // Make sure realViewportH - viewportY includes viewportH
-            int realViewportW = (int) (viewPortRatio * viewportW + 2*absTransX);
-            int realViewportH = (int) (viewPortRatio * viewportH + 2*absTransY);
+            int realViewportW = (int) (viewPortRatio * viewportW + 2 * absTransX);
+            int realViewportH = (int) (viewPortRatio * viewportH + 2 * absTransY);
             realViewportW = Math.max(realViewportW, maxViewPortInt);
             realViewportH = Math.min(realViewportH, maxViewPortInt);
             int viewportX = (int) (drawW / 2 - realViewportW / 2 + transform[TRANSLATE_X]);
@@ -226,7 +232,7 @@ public interface ICanvasGL {
             float realH = 2 * drawH / realViewportH * Z_RATIO;
 
             // Need to make X, Y to the middleZ of the plane, too. The middleZ of the plane is (0, 0, -Z_RATIO + EYEZ)
-            Matrix.translateM(tempMultiplyMatrix4, 0, mModelMatrix, 0, -realW/2, -realH/2, -Z_RATIO + EYEZ);
+            Matrix.translateM(tempMultiplyMatrix4, 0, mModelMatrix, 0, -realW / 2, -realH / 2, -Z_RATIO + EYEZ);
             GLES20Canvas.printMatrix("model translated:", tempMultiplyMatrix4, 0);
 
             Matrix.scaleM(tempMultiplyMatrix4, 0, transform[SCALE_X] * realW, transform[SCALE_Y] * realH, 1);
@@ -240,7 +246,6 @@ public interface ICanvasGL {
         }
 
     }
-
 
 
     /**
@@ -265,6 +270,7 @@ public interface ICanvasGL {
 
         /**
          * The center x, y is the center of the view port
+         *
          * @param degrees
          */
         public void rotateZ(float degrees) {
@@ -291,11 +297,11 @@ public interface ICanvasGL {
 
 
             final float transX = transform[TRANSLATE_X] / viewportW;
-            final float transY = transform[TRANSLATE_Y] / viewportH -1;
+            final float transY = transform[TRANSLATE_Y] / viewportH - 1;
             Matrix.translateM(tempMultiplyMatrix4, 0, mModelMatrix, 0, transX, transY, 0);
             GLES20Canvas.printMatrix("model translated:", tempMultiplyMatrix4, 0);
 
-            Matrix.scaleM(tempMultiplyMatrix4, 0, transform[SCALE_X] * drawW/viewportW * ratio, transform[SCALE_Y] * drawH/viewportH, 1);
+            Matrix.scaleM(tempMultiplyMatrix4, 0, transform[SCALE_X] * drawW / viewportW * ratio, transform[SCALE_Y] * drawH / viewportH, 1);
             GLES20Canvas.printMatrix("model scaled:", tempMultiplyMatrix4, 0);
 
 

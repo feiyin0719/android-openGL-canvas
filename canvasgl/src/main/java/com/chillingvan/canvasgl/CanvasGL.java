@@ -26,6 +26,7 @@ import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.SurfaceTexture;
+import android.opengl.ETC1Util;
 import android.opengl.GLES20;
 import android.os.Build;
 import android.support.annotation.IntRange;
@@ -34,6 +35,7 @@ import android.support.annotation.Nullable;
 
 import com.chillingvan.canvasgl.glcanvas.BasicTexture;
 import com.chillingvan.canvasgl.glcanvas.BitmapTexture;
+import com.chillingvan.canvasgl.glcanvas.ETC1UploadedTexture;
 import com.chillingvan.canvasgl.glcanvas.GLCanvas;
 import com.chillingvan.canvasgl.glcanvas.GLES20Canvas;
 import com.chillingvan.canvasgl.glcanvas.GLPaint;
@@ -56,6 +58,7 @@ import java.util.WeakHashMap;
 public class CanvasGL implements ICanvasGL {
 
     private Map<Bitmap, BasicTexture> bitmapTextureMap = new WeakHashMap<>();
+    private Map<ETC1Util.ETC1Texture, BasicTexture> etc1TextureBasicTextureMap = new WeakHashMap<>();
     protected final GLCanvas glCanvas;
     protected final BasicTextureFilter defaultTextureFilter;
     private float[] canvasBackgroundColor;
@@ -243,11 +246,45 @@ public class CanvasGL implements ICanvasGL {
         glCanvas.drawTexture(basicTexture, left, top, width, height, textureFilter, null);
     }
 
+    @Override
+    public void drawETC1Texture(ETC1Util.ETC1Texture texture, Rect src, Rect dst, TextureFilter textureFilter) {
+        if (textureFilter == null)
+            textureFilter = defaultTextureFilter;
+        BasicTexture basicTexture = getTexture(texture, textureFilter);
+        glCanvas.drawTexture(basicTexture, new RectF(src), new RectF(dst), textureFilter, null);
+    }
+
+    @Override
+    public void drawETC1Texture(ETC1Util.ETC1Texture texture, Rect src, Rect dst) {
+        drawETC1Texture(texture, src, dst, null);
+    }
+
+
     protected BasicTexture getTexture(Bitmap bitmap, @Nullable TextureFilter textureFilter) {
         currentTextureFilter = textureFilter;
         throwIfCannotDraw(bitmap);
 
         BasicTexture resultTexture = getTextureFromMap(bitmap);
+
+        if (textureFilter instanceof FilterGroup) {
+            FilterGroup filterGroup = (FilterGroup) textureFilter;
+            resultTexture = filterGroup.draw(resultTexture, glCanvas, new FilterGroup.OnDrawListener() {
+                @Override
+                public void onDraw(BasicTexture drawTexture, TextureFilter textureFilter, boolean isFirst) {
+                    glCanvas.drawTexture(drawTexture, 0, 0, drawTexture.getWidth(), drawTexture.getHeight(), textureFilter, null);
+                }
+            });
+        }
+
+
+        return resultTexture;
+    }
+
+    protected BasicTexture getTexture(ETC1Util.ETC1Texture etc1Texture, @Nullable TextureFilter textureFilter) {
+        currentTextureFilter = textureFilter;
+
+
+        BasicTexture resultTexture = getTextureFromMap(etc1Texture);
 
         if (textureFilter instanceof FilterGroup) {
             FilterGroup filterGroup = (FilterGroup) textureFilter;
@@ -286,12 +323,23 @@ public class CanvasGL implements ICanvasGL {
         return resultTexture;
     }
 
+    private BasicTexture getTextureFromMap(ETC1Util.ETC1Texture etc1Texture) {
+        BasicTexture resultTexture;
+        if (etc1TextureBasicTextureMap.containsKey(etc1Texture)) {
+            resultTexture = etc1TextureBasicTextureMap.get(etc1Texture);
+        } else {
+            resultTexture = new ETC1UploadedTexture(etc1Texture);
+            etc1TextureBasicTextureMap.put(etc1Texture, resultTexture);
+        }
+        return resultTexture;
+    }
+
     @Override
     public void drawCircle(float x, float y, float radius, GLPaint paint) {
         if (paint.getStyle() == Paint.Style.FILL) {
             drawCircleFilter.setLineWidth(0.5f);
         } else {
-            drawCircleFilter.setLineWidth(paint.getLineWidth() / (2*radius));
+            drawCircleFilter.setLineWidth(paint.getLineWidth() / (2 * radius));
         }
         glCanvas.drawCircle(x - radius, y - radius, radius, paint, drawCircleFilter);
     }
@@ -418,12 +466,15 @@ public class CanvasGL implements ICanvasGL {
         for (BasicTexture bitmapTexture : bitmapTextureMap.values()) {
             bitmapTexture.recycle();
         }
+        for (BasicTexture texture : etc1TextureBasicTextureMap.values())
+            texture.recycle();
+        etc1TextureBasicTextureMap.clear();
         bitmapTextureMap.clear();
     }
 
     @Override
     public void setAlpha(@IntRange(from = 0, to = 255) int alpha) {
-        glCanvas.setAlpha(alpha/(float)255);
+        glCanvas.setAlpha(alpha / (float) 255);
     }
 
     @Override

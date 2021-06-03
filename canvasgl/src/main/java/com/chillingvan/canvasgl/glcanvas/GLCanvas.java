@@ -23,6 +23,7 @@ package com.chillingvan.canvasgl.glcanvas;
 import android.graphics.Bitmap;
 import android.graphics.Rect;
 import android.graphics.RectF;
+import android.opengl.ETC1Util;
 import android.support.annotation.Nullable;
 
 import com.chillingvan.canvasgl.shapeFilter.DrawShapeFilter;
@@ -187,6 +188,9 @@ public interface GLCanvas {
     public abstract void texSubImage2D(BasicTexture texture, int xOffset, int yOffset,
                                        Bitmap bitmap,
                                        int format, int type);
+
+
+    public abstract void texETC1Texture(BasicTexture texture, int level, int border, int fallbackFormat, int fallbackType, ETC1Util.ETC1Texture etc1Texture);
 
     /**
      * Generates buffers and uploads the buffer data.
