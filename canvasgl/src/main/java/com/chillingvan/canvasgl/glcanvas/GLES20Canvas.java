@@ -22,7 +22,6 @@ package com.chillingvan.canvasgl.glcanvas;
 import android.graphics.Bitmap;
 import android.graphics.Rect;
 import android.graphics.RectF;
-import android.opengl.ETC1;
 import android.opengl.ETC1Util;
 import android.opengl.GLES11Ext;
 import android.opengl.GLES20;
@@ -339,6 +338,7 @@ public class GLES20Canvas implements GLCanvas {
     public void setSize(int width, int height) {
         mWidth = width;
         mHeight = height;
+        GLES20.glViewport(0, 0, mWidth, mHeight);
         checkError();
         Matrix.setIdentityM(mMatrices, mCurrentMatrixIndex);
         Matrix.orthoM(mProjectionMatrix, 0, 0, width, 0, height, -1, 1);
@@ -569,11 +569,10 @@ public class GLES20Canvas implements GLCanvas {
 
     private void setMatrix(ShaderParameter[] params, float x, float y, float width, float height, ICustomMVPMatrix customMVPMatrix) {
         if (customMVPMatrix != null) {
-            GLES20.glUniformMatrix4fv(params[INDEX_MATRIX].handle, 1, false, customMVPMatrix.getMVPMatrix(mScreenWidth, mScreenHeight, x, y, width, height), 0);
+            GLES20.glUniformMatrix4fv(params[INDEX_MATRIX].handle, 1, false, customMVPMatrix.getMVPMatrix(mWidth, mHeight, x, y, width, height), 0);
             checkError();
             return;
         }
-        GLES20.glViewport(0, 0, (int)width, (int)height);
         Matrix.translateM(mTempMatrix, 0, mMatrices, mCurrentMatrixIndex, x, y, 0f);
         Matrix.scaleM(mTempMatrix, 0, width, height, 1f);
         Matrix.multiplyMM(mTempMatrix, MATRIX_SIZE, mProjectionMatrix, 0, mTempMatrix, 0);
